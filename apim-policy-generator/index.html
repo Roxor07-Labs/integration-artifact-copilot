@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Integration Artifact Copilot</title>
+  <style>
+    /* ── Tokens ── */
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --accent:    #58a6ff;
+      --accent2:   #3fb950;
+      --warn:      #d29922;
+      --danger:    #f85149;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --radius:    8px;
+      --mono:      "JetBrains Mono", "Fira Code", monospace;
+      --sans:      "Inter", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    header .logo span { color: var(--accent); }
+    header .badge {
+      background: #1f3d5c;
+      color: var(--accent);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    header .status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    header .status .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent2);
+    }
+
+    /* ── Layout ── */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr;
+      gap: 0;
+      height: calc(100vh - 57px);
+    }
+
+    /* ── Panels ── */
+    .panel {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel:last-child { border-right: none; }
+
+    .panel-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+    }
+    .panel-header .label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .panel-header .title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    /* ── Input area ── */
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 14px;
+      resize: vertical;
+      min-height: 180px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+
+    /* ── Selects & inputs ── */
+    select, input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+    select:focus, input[type="text"]:focus { border-color: var(--accent); }
+
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0d1117;
+      width: 100%;
+      justify-content: center;
+      font-size: 14px;
+      padding: 12px;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: 0.85; }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-success {
+      background: #1a3d2e;
+      color: var(--accent2);
+      border: 1px solid #2d6a4a;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      overflow-x: auto;
+    }
+    .tab {
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color 0.2s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ── Code blocks ── */
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+      color: #a5d6ff;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    /* ── Badges ── */
+    .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tag {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .tag-info    { background: #1f3d5c; color: var(--accent); }
+    .tag-success { background: #1a3d2e; color: var(--accent2); }
+    .tag-warn    { background: #3d2e0a; color: var(--warn); }
+    .tag-danger  { background: #3d1a1a; color: var(--danger); }
+
+    /* ── Findings ── */
+    .finding {
+      display: flex;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .finding.high   { background: #2d1212; border-left: 3px solid var(--danger); }
+    .finding.medium { background: #2d1f0a; border-left: 3px solid var(--warn); }
+    .finding.low    { background: #1a2d1a; border-left: 3px solid var(--accent2); }
+    .finding.info   { background: #0d1f3d; border-left: 3px solid var(--accent); }
+    .finding .sev   { font-weight: 700; font-size: 11px; min-width: 50px; }
+
+    /* ── Loading ── */
+    .loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      gap: 16px;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Empty state ── */
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      text-align: center;
+      gap: 12px;
+    }
+    .empty .icon { font-size: 48px; opacity: 0.3; }
+    .empty p { font-size: 13px; max-width: 260px; }
+
+    /* ── Confidence bar ── */
+    .confidence-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .confidence-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 1s ease;
+    }
+
+    /* ── Copy button ── */
+    .code-wrap { position: relative; }
+    .copy-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: var(--sans);
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── Action bar ── */
+    .action-bar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .workspace { grid-template-columns: 1fr 1fr; height: auto; }
+    }
+    @media (max-width: 768px) {
+      .workspace { grid-template-columns: 1fr; height: auto; }
+      .panel { height: auto; min-height: 400px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Integration <span>Artifact Copilot</span></div>
+  <div class="badge">OpenAPI • APIM • Transformations • Logic Apps</div>
+  <div class="status">
+    <div class="dot" id="status-dot"></div>
+    <span id="status-text">Connecting...</span>
+  </div>
+</header>
+
+<div class="workspace">
+
+  <!-- ── INPUT 1 PANEL ── -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="label">Input 1</div>
+        <div class="title">Source — What you have</div>
+      </div>
+    </div>
+    <div class="panel-body">
+
+      <div class="field">
+        <label>Paste your source content</label>
+        <textarea id="input1" rows="14"
+          placeholder="Paste any of the following:
+• OpenAPI / Swagger spec (YAML or JSON)
+• Existing policy XML (APIM, Kong, Nginx, Apigee)
+• Plain English description
+• JSON or XML schema
+• Existing Logic App definition"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Source Platform (detected automatically)</label>
+        <select id="source-platform">
+          <option value="auto">Auto Detect</option>
+          <option value="azure_apim">Azure API Management</option>
+          <option value="kong">Kong Gateway</option>
+          <option value="nginx">Nginx</option>
+          <option value="apigee">Apigee</option>
+          <option value="openapi">OpenAPI / Swagger</option>
+          <option value="plain_text">Plain English</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <button class="btn btn-secondary" style="flex:1" onclick="loadExample('openapi')">
+          Load OpenAPI Example
+        </button>
+        <button class="btn btn-secondary" style="flex:1" onclick="loadExample('policy')">
+          Load Policy Example
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── INPUT 2 PANEL ── -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="label">Input 2</div>
+        <div class="title">Target — What you want</div>
+      </div>
+    </div>
+    <div class="panel-body">
+
+      <div class="field">
+        <label id="input2-label">Paste desired output structure / requirement</label>
+        <textarea id="input2" rows="8"
+          placeholder="Examples:
+• JSON/XML transform: paste target output structure
+• OpenAPI: describe upgrade/improvement requirement
+• Azure APIM: describe policy behavior
+• Logic Apps: describe workflow"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Target Platform</label>
+        <select id="target-platform" onchange="updateTargetOptions()">
+          <option value="generic">Generic Transformation</option>
+          <option value="azure_apim">Azure API Management (APIM)</option>
+          <option value="logic_app">Azure Logic Apps</option>
+          <option value="plain_english">Plain English / Explain</option>
+          <option disabled>──────────</option>
+          <option value="kong">Kong Gateway (Coming Soon)</option>
+          <option value="apigee">Apigee (Coming Soon)</option>
+          <option value="nginx">NGINX (Coming Soon)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Artifact to Generate</label>
+        <select id="target-format">
+          <option value="javascript_transform">JavaScript Transform</option>
+          <option value="xslt_transform">XSLT Transform</option>
+          <option value="openapi_v3">OpenAPI v3 Spec</option>
+          <option value="policy_xml">Azure APIM Policy XML</option>
+          <option value="logic_app_json">Logic App Workflow</option>
+          <option value="security_report">Security Report</option>
+          <option value="documentation">Documentation / Explanation</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Context (optional)</label>
+        <input type="text" id="context"
+          placeholder="e.g. Production API, e-commerce, requires JWT auth" />
+      </div>
+
+      <button class="btn btn-primary" id="generate-btn" onclick="generate()">
+        ⚡ Generate Artifacts
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ── RIGHT: OUTPUT PANEL ── -->
+  <div class="panel">
+    <div class="tabs" id="output-tabs" style="display:none"></div>
+
+    <div class="panel-body" id="output-body">
+      <div class="empty">
+        <div class="icon">⚙️</div>
+        <p>Paste your input on the left and click Generate to see all artifacts here.</p>
+      </div>
+    </div>
+
+    <div class="action-bar" id="action-bar" style="display:none">
+      <button class="btn btn-secondary" onclick="copyActive()">📋 Copy</button>
+      <button class="btn btn-success" onclick="downloadAll()" style="margin-left:auto">
+        📥 Download All (.zip)
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentResult = null;
+  let activeTab = 'analysis';
+
+  // ── Status check ──────────────────────────────────────────────────────────
+  async function checkHealth() {
+    try {
+      const r = await fetch('/health');
+      const d = await r.json();
+      document.getElementById('status-dot').style.background = '#3fb950';
+      document.getElementById('status-text').textContent = `Ready · ${d.model}`;
+    } catch {
+      document.getElementById('status-dot').style.background = '#f85149';
+      document.getElementById('status-text').textContent = 'API offline';
+    }
+  }
+  checkHealth();
+  updateTargetOptions();
+
+  // ── Generate ──────────────────────────────────────────────────────────────
+  async function generate() {
+    const input1 = document.getElementById('input1').value.trim();
+    if (!input1) { alert('Please paste your input content first.'); return; }
+
+    const btn = document.getElementById('generate-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating...';
+
+    document.getElementById('output-body').innerHTML = `
+      <div class="loader">
+        <div class="spinner"></div>
+        <div>Analyzing input and generating artifacts...</div>
+        <div style="font-size:12px;color:var(--muted)">This may take 15–30 seconds</div>
+      </div>`;
+    document.getElementById('output-tabs').style.display = 'none';
+    document.getElementById('action-bar').style.display = 'none';
+
+    try {
+      const input2 = document.getElementById('input2').value.trim();
+      const context = document.getElementById('context').value;
+      const combinedContext = [
+        context,
+        input2 ? `Desired output format/spec:\n${input2}` : ''
+      ].filter(Boolean).join('\n\n');
+
+      const res = await fetch('/transform', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input_content: input1,
+          target_output: document.getElementById('target-platform').value,
+          target_format: document.getElementById('target-format').value,
+          context: combinedContext
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Server error');
+      }
+
+      currentResult = await res.json();
+      renderResult(currentResult);
+
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `
+        <div class="card" style="border-color: var(--danger)">
+          <div class="card-title" style="color:var(--danger)">Error</div>
+          <p>${e.message}</p>
+          <p style="margin-top:8px;color:var(--muted);font-size:12px">
+            Make sure your ANTHROPIC_API_KEY is set in the .env file.
+          </p>
+        </div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚡ Generate Artifacts';
+    }
+  }
+
+  // ── Render result ─────────────────────────────────────────────────────────
+  function createTab(tabId, label) {
+    const div = document.createElement('div');
+    div.className = 'tab';
+    div.dataset.tab = tabId;
+    div.textContent = label;
+    div.onclick = () => showTab(tabId);
+    return div;
+  }
+
+  function renderResult(r) {
+    const tabs = document.getElementById('output-tabs');
+    tabs.innerHTML = '';
+
+    tabs.appendChild(createTab('analysis', '📊 Analysis'));
+
+    const scenario = r.scenario || 'generic_transform';
+
+    if (scenario === 'json_transform') {
+      tabs.appendChild(createTab('javascript', '⚡ JavaScript'));
+      tabs.appendChild(createTab('logicapp', '☁️ Logic App'));
+    }
+    else if (scenario === 'xml_transform') {
+      tabs.appendChild(createTab('xslt', '🔄 XSLT'));
+      tabs.appendChild(createTab('logicapp', '☁️ Logic App'));
+    }
+    else if (scenario === 'openapi_generation') {
+      tabs.appendChild(createTab('openapi', '📘 OpenAPI'));
+    }
+    else if (scenario === 'azure_apim_policy') {
+      tabs.appendChild(createTab('policy', '📄 Policy XML'));
+      tabs.appendChild(createTab('security', '🔒 Security'));
+    }
+    else if (scenario === 'logic_app') {
+      tabs.appendChild(createTab('logicapp', '☁️ Logic App'));
+    }
+    else if (scenario === 'security_report') {
+      tabs.appendChild(createTab('security', '🔒 Security'));
+    }
+    else if (scenario === 'documentation') {
+      // Analysis tab contains documentation.
+    }
+    else if (scenario === 'coming_soon') {
+      // Analysis tab only.
+    }
+    else {
+      if (r.openapi_spec) tabs.appendChild(createTab('openapi', '📘 OpenAPI'));
+      if (r.policy_xml) tabs.appendChild(createTab('policy', '📄 Policy XML'));
+      if (r.xslt_code) tabs.appendChild(createTab('xslt', '🔄 XSLT'));
+      if (r.javascript_code) tabs.appendChild(createTab('javascript', '⚡ JavaScript'));
+      if (r.logic_app_block && Object.keys(r.logic_app_block).length) {
+        tabs.appendChild(createTab('logicapp', '☁️ Logic App'));
+      }
+      if (r.security_findings && r.security_findings.length) {
+        tabs.appendChild(createTab('security', '🔒 Security'));
+      }
+    }
+
+    tabs.style.display = 'flex';
+    document.getElementById('action-bar').style.display = 'flex';
+    showTab('analysis');
+  }
+
+  function showTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => {
+      if (t.dataset.tab === tab) t.classList.add('active');
+    });
+
+    const body = document.getElementById('output-body');
+    const r = currentResult;
+    if (!r) return;
+
+    if (tab === 'analysis') {
+      const a = r.analysis || {};
+      const detected = r.detected || {};
+      const confidence = a.confidence_score || 0;
+      body.innerHTML = `
+        <div class="card">
+          <div class="card-title">Detected Input</div>
+          <div class="badge-row">
+            <span class="tag tag-info">${detected.detected_format || 'unknown'}</span>
+            <span class="tag tag-info">${detected.detected_platform || 'unknown'}</span>
+            <span class="tag tag-success">${detected.complexity || 'medium'} complexity</span>
+          </div>
+          <p style="margin-top:10px;color:var(--muted);font-size:13px">${detected.summary || ''}</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Transformation Summary</div>
+          <p style="font-size:13px">${a.input_summary || ''}</p>
+          <p style="margin-top:8px;font-size:13px;color:var(--muted)">${a.transformation_approach || ''}</p>
+          <div class="card-title" style="margin-top:14px">Confidence Score — ${confidence}%</div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" style="width:${confidence}%"></div>
+          </div>
+        </div>
+
+        ${(a.field_mappings || []).length ? `
+        <div class="card">
+          <div class="card-title">Field Mappings</div>
+          ${(a.field_mappings || []).map(m => `
+            <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
+              <code style="color:var(--accent);flex:1">${m.source}</code>
+              <span style="color:var(--muted)">→</span>
+              <code style="color:var(--accent2);flex:1">${m.target}</code>
+              <span style="color:var(--muted);flex:1;font-size:12px">${m.notes || ''}</span>
+            </div>`).join('')}
+        </div>` : ''}
+
+        ${(a.warnings || []).length ? `
+        <div class="card">
+          <div class="card-title">⚠️ Warnings</div>
+          ${(a.warnings || []).map(w => `
+            <div class="finding medium"><span>${w}</span></div>`).join('')}
+        </div>` : ''}
+
+        ${(a.recommendations || []).length ? `
+        <div class="card">
+          <div class="card-title">💡 Recommendations</div>
+          ${(a.recommendations || []).map(rec => `
+            <div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted)">
+              → ${rec}
+            </div>`).join('')}
+        </div>` : ''}
+
+        <div class="card">
+          <div class="card-title">Explanation</div>
+          <p style="font-size:13px;line-height:1.8">${r.explanation || ''}</p>
+        </div>`;
+    }
+
+    else if (tab === 'openapi') {
+      const code = r.openapi_spec || '# No OpenAPI spec generated.';
+      body.innerHTML = codeBlock(code, 'yaml');
+    }
+
+    else if (tab === 'policy') {
+      const code = r.policy_xml || '// No policy XML generated for this transformation.';
+      body.innerHTML = codeBlock(code, 'xml');
+    }
+
+    else if (tab === 'xslt') {
+      const xslt = r.xslt_code;
+      const js   = r.javascript_code;
+      const py   = r.python_code;
+      const jq   = r.jq_script;
+      body.innerHTML = `
+        ${xslt ? `<div class="card-title" style="margin-bottom:8px">XSLT</div>${codeBlock(xslt, 'xml')}` : ''}
+        ${js   ? `<div class="card-title" style="margin:16px 0 8px">JavaScript / JSONata</div>${codeBlock(js, 'javascript')}` : ''}
+        ${py   ? `<div class="card-title" style="margin:16px 0 8px">Python</div>${codeBlock(py, 'python')}` : ''}
+        ${jq   ? `<div class="card-title" style="margin:16px 0 8px">JQ Script</div>${codeBlock(jq, 'bash')}` : ''}
+        ${!xslt && !js && !py && !jq ? '<div class="empty"><div class="icon">🔄</div><p>No transformation code generated for this input/output combination.</p></div>' : ''}`;
+    }
+
+    else if (tab === 'javascript') {
+      const code = r.javascript_code || '// No JavaScript generated for this transformation.';
+      body.innerHTML = codeBlock(code, 'javascript');
+    }
+
+    else if (tab === 'logicapp') {
+      const la = r.logic_app_block || {};
+      const action = la.action_block;
+      const arm    = la.arm_template_snippet;
+      const conn   = la.connector_config;
+      body.innerHTML = `
+        ${action ? `<div class="card-title" style="margin-bottom:8px">Logic App Action Block</div>
+          ${codeBlock(typeof action === 'object' ? JSON.stringify(action, null, 2) : action, 'json')}` : ''}
+        ${arm    ? `<div class="card-title" style="margin:16px 0 8px">ARM Template Snippet</div>
+          ${codeBlock(typeof arm === 'object' ? JSON.stringify(arm, null, 2) : arm, 'json')}` : ''}
+        ${conn   ? `<div class="card-title" style="margin:16px 0 8px">Connector Config</div>
+          ${codeBlock(typeof conn === 'object' ? JSON.stringify(conn, null, 2) : conn, 'json')}` : ''}
+        ${!action && !arm && !conn ? '<div class="empty"><div class="icon">☁️</div><p>Select "Azure Logic App" as target platform to generate Logic App artifacts.</p></div>' : ''}`;
+    }
+
+    else if (tab === 'security') {
+      const findings = r.security_findings || [];
+      if (!findings.length) {
+        body.innerHTML = `<div class="empty"><div class="icon">🔒</div><p>No security findings — input looks clean!</p></div>`;
+        return;
+      }
+      const grouped = { high: [], medium: [], low: [], info: [] };
+      findings.forEach(f => (grouped[f.severity] || grouped.info).push(f));
+      body.innerHTML = `
+        <div class="badge-row" style="margin-bottom:16px">
+          ${grouped.high.length   ? `<span class="tag tag-danger">${grouped.high.length} High</span>` : ''}
+          ${grouped.medium.length ? `<span class="tag tag-warn">${grouped.medium.length} Medium</span>` : ''}
+          ${grouped.low.length    ? `<span class="tag tag-success">${grouped.low.length} Low</span>` : ''}
+          ${grouped.info.length   ? `<span class="tag tag-info">${grouped.info.length} Info</span>` : ''}
+        </div>
+        ${findings.map(f => `
+          <div class="finding ${f.severity}">
+            <div>
+              <div style="font-weight:700;font-size:12px;margin-bottom:4px">${f.finding}</div>
+              <div style="font-size:12px;color:var(--muted)">→ ${f.recommendation}</div>
+            </div>
+          </div>`).join('')}`;
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function codeBlock(code, lang) {
+    const escaped = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><code>${escaped}</code></pre>
+    </div>`;
+  }
+
+  function copyCode(btn) {
+    const code = btn.nextElementSibling.textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    });
+  }
+
+  function copyActive() {
+    if (!currentResult) return;
+    const map = {
+      analysis:   currentResult.explanation || JSON.stringify(currentResult.analysis || {}, null, 2),
+      openapi:    currentResult.openapi_spec,
+      policy:     currentResult.policy_xml,
+      xslt:       currentResult.xslt_code,
+      javascript: currentResult.javascript_code,
+      logicapp:   JSON.stringify(currentResult.logic_app_block, null, 2),
+      security:   JSON.stringify(currentResult.security_findings, null, 2)
+    };
+    navigator.clipboard.writeText(map[activeTab] || '').then(() => {
+      const btn = document.querySelector('.action-bar .btn-secondary');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => btn.textContent = '📋 Copy', 1500);
+    });
+  }
+
+  async function downloadAll() {
+    if (!currentResult) return;
+    const btn = document.querySelector('.btn-success');
+    btn.disabled = true;
+    btn.textContent = '⏳ Preparing...';
+    try {
+      const res = await fetch('/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input_content: document.getElementById('input1').value,
+          target_output: document.getElementById('target-platform').value,
+          target_format: document.getElementById('target-format').value,
+          context: [
+            document.getElementById('context').value,
+            document.getElementById('input2').value.trim()
+              ? `Desired output format/spec:\n${document.getElementById('input2').value.trim()}`
+              : ''
+          ].filter(Boolean).join('\n\n')
+        })
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'integration-artifacts.zip'; a.click();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📥 Download All (.zip)';
+    }
+  }
+
+
+  // ── Dynamic target options ────────────────────────────────────────────────
+  function updateTargetOptions() {
+    const platform = document.getElementById('target-platform').value;
+    const targetFormat = document.getElementById('target-format');
+    const input2Label = document.getElementById('input2-label');
+    const input2 = document.getElementById('input2');
+
+    const options = {
+      generic: [
+        ['javascript_transform', 'JavaScript Transform'],
+        ['xslt_transform', 'XSLT Transform'],
+        ['openapi_v3', 'OpenAPI v3 Spec'],
+        ['documentation', 'Mapping Analysis / Explanation']
+      ],
+      azure_apim: [
+        ['policy_xml', 'Azure APIM Policy XML'],
+        ['openapi_v3', 'OpenAPI v3 Spec'],
+        ['security_report', 'Security Report'],
+        ['documentation', 'Documentation / Explanation']
+      ],
+      logic_app: [
+        ['logic_app_json', 'Logic App Workflow'],
+        ['javascript_transform', 'Inline Code JavaScript'],
+        ['documentation', 'Connector Guidance']
+      ],
+      plain_english: [
+        ['documentation', 'Documentation / Explanation'],
+        ['security_report', 'Security Report']
+      ],
+      kong: [
+        ['documentation', 'Coming Soon']
+      ],
+      apigee: [
+        ['documentation', 'Coming Soon']
+      ],
+      nginx: [
+        ['documentation', 'Coming Soon']
+      ]
+    };
+
+    targetFormat.innerHTML = '';
+    (options[platform] || options.generic).forEach(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      targetFormat.appendChild(option);
+    });
+
+    if (platform === 'azure_apim') {
+      input2Label.textContent = 'Describe desired APIM policy / OpenAPI change';
+      input2.placeholder = 'Examples:\\n• For policy: Require JWT validation, rate limit 100/min, enable CORS\\n• For OpenAPI: Convert Swagger 2.0 to OpenAPI 3.0 and add OAuth2 security scheme';
+    }
+    else if (platform === 'logic_app') {
+      input2Label.textContent = 'Describe desired Logic App workflow';
+      input2.placeholder = 'Example:\\nReceive HTTP request\\nTransform JSON payload\\nCall backend API\\nReturn transformed response';
+    }
+    else if (platform === 'kong' || platform === 'apigee' || platform === 'nginx') {
+      input2Label.textContent = 'Coming soon';
+      input2.placeholder = 'This platform is planned but not implemented in this POC.';
+    }
+    else {
+      input2Label.textContent = 'Paste desired output structure';
+      input2.placeholder = 'Example target JSON/XML structure:\\n{\\n  "id": 123,\\n  "status": "active"\\n}';
+    }
+  }
+
+  // ── Example loaders ───────────────────────────────────────────────────────
+  function loadExample(type) {
+    if (type === 'openapi') {
+      document.getElementById('input1').value = `openapi: "3.0.0"
+info:
+  title: Customer API
+  version: "1.0.0"
+paths:
+  /customers:
+    get:
+      summary: List customers
+      responses:
+        "200":
+          description: List of customers
+    post:
+      summary: Create customer
+  /customers/{id}:
+    get:
+      summary: Get customer by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string`;
+      document.getElementById('target-platform').value = 'azure_apim';
+      updateTargetOptions();
+      document.getElementById('target-format').value = 'policy_xml';
+      document.getElementById('input2').value = 'Require JWT authentication.\nRate limit to 100 requests per minute.\nEnable CORS for a trusted frontend origin.\nAdd security headers.';
+    } else {
+      document.getElementById('input1').value = `<policies>
+  <inbound>
+    <base />
+    <rate-limit calls="100" renewal-period="60" />
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+</policies>`;
+      document.getElementById('target-platform').value = 'azure_apim';
+      updateTargetOptions();
+      document.getElementById('target-format').value = 'policy_xml';
+      document.getElementById('input2').value = 'Improve this APIM policy for production. Add JWT validation, rate limiting, correlation ID, and security headers.';
+    }
+  }
+</script>
+</body>
+</html>
