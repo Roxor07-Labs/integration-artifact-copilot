@@ -1,4 +1,12 @@
-# Screenshots
+## Live Demo
+
+The application is deployed on Render:
+
+https://integration-artifact-copilot-v1.onrender.com
+
+Health check:
+
+https://integration-artifact-copilot-v1.onrender.com/health
 
 ## Home Screen
 
